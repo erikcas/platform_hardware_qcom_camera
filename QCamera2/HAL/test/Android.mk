@@ -39,10 +39,14 @@ LOCAL_C_INCLUDES += \
     frameworks/base/include/media \
     external/skia/include/core \
     external/skia/include/images \
-    hardware/qcom/display/libgralloc \
     frameworks/av/include/media/stagefright \
     frameworks/native/include/media/openmax \
 
+ifneq ($(TARGET_QCOM_DISPLAY_VARIANT),)
+    LOCAL_C_INCLUDES        += hardware/qcom/display-$(TARGET_QCOM_DISPLAY_VARIANT)/libgralloc
+else
+    LOCAL_C_INCLUDES        += hardware/qcom/display/libgralloc
+endif
 LOCAL_MODULE:= camera_test
 LOCAL_MODULE_TAGS:= tests
 
