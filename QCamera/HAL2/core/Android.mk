@@ -1,5 +1,4 @@
-
-#ifeq ($(call is-board-platform,msm8960),true)
+ifeq ($(call is-board-platform,msm8960),true)
 OLD_LOCAL_PATH := $(LOCAL_PATH)
 LOCAL_PATH := $(call my-dir)
 
@@ -53,10 +52,19 @@ LOCAL_C_INCLUDES := \
         $(LOCAL_PATH)/../../stack/mm-jpeg-interface/inc\
         $(TARGET_OUT_INTERMEDIATES)/include/mm-camera-interface_badger \
 
-LOCAL_C_INCLUDES += hardware/qcom/display/libgralloc \
-        hardware/qcom/display/libgenlock \
-        hardware/qcom/media/libstagefrighthw \
-	system/media/camera/include
+ifneq ($(TARGET_QCOM_DISPLAY_VARIANT),)
+    LOCAL_C_INCLUDES += hardware/qcom/display-$(TARGET_QCOM_DISPLAY_VARIANT)/libgralloc \
+                        hardware/qcom/display-$(TARGET_QCOM_DISPLAY_VARIANT)/libgenlock
+else
+    LOCAL_C_INCLUDES += hardware/qcom/display/libgralloc \
+                        hardware/qcom/display/libgenlock
+endif
+ifneq ($(TARGET_QCOM_MEDIA_VARIANT),)
+    LOCAL_C_INCLUDES += hardware/qcom/media-$(TARGET_QCOM_MEDIA_VARIANT)/libstagefrighthw
+else
+    LOCAL_C_INCLUDES += hardware/qcom/media/libstagefrighthw
+endif
+LOCAL_C_INCLUDES += system/media/camera/include
 
 # if debug service layer and up , use stub camera!
 LOCAL_C_INCLUDES += \
@@ -78,4 +86,4 @@ LOCAL_MODULE_TAGS := optional
 include $(BUILD_SHARED_LIBRARY)
 
 LOCAL_PATH := $(OLD_LOCAL_PATH)
-
+endif
