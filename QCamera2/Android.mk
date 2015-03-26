@@ -1,4 +1,4 @@
-ifneq (,$(filter $(TARGET_ARCH), arm arm64))
+ifeq ($(TARGET_ARCH),arm)
 
 LOCAL_PATH:= $(call my-dir)
 
@@ -32,7 +32,7 @@ LOCAL_SRC_FILES += \
         HAL/QCameraParameters.cpp \
         HAL/QCameraThermalAdapter.cpp
 
-LOCAL_CFLAGS := -Wall -Wextra -Werror
+LOCAL_CFLAGS := -Wall -Werror
 LOCAL_CFLAGS += -DHAS_MULTIMEDIA_HINTS
 
 ifeq ($(TARGET_USES_AOSP),true)
@@ -49,29 +49,38 @@ LOCAL_C_INCLUDES := \
         $(LOCAL_PATH)/stack/common \
         frameworks/native/include/media/hardware \
         frameworks/native/include/media/openmax \
-        hardware/qcom/media/libstagefrighthw \
         system/media/camera/include \
         $(LOCAL_PATH)/../mm-image-codec/qexif \
         $(LOCAL_PATH)/../mm-image-codec/qomx_core \
         $(LOCAL_PATH)/util \
+
+ifneq ($(TARGET_QCOM_MEDIA_VARIANT),)
+    LOCAL_C_INCLUDES += hardware/qcom/media-$(TARGET_QCOM_MEDIA_VARIANT)/libstagefrighthw
+else
+    LOCAL_C_INCLUDES += hardware/qcom/media/libstagefrighthw
+endif
 
 #HAL 1.0 Include paths
 LOCAL_C_INCLUDES += \
         frameworks/native/include/media/hardware \
         hardware/sony/camera/QCamera2/HAL
 
-ifeq ($(TARGET_COMPILE_WITH_MSM_KERNEL),true)
 LOCAL_C_INCLUDES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/media
 LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
-endif
 
 #LOCAL_STATIC_LIBRARIES := libqcamera2_util
-LOCAL_C_INCLUDES += \
-        $(TARGET_OUT_HEADERS)/qcom/display
+ifneq ($(TARGET_QCOM_DISPLAY_VARIANT),)
+    LOCAL_C_INCLUDES        += hardware/qcom/display-$(TARGET_QCOM_DISPLAY_VARIANT)/libgralloc
+    LOCAL_C_INCLUDES        += hardware/qcom/display-$(TARGET_QCOM_DISPLAY_VARIANT)/libqdutils
+else
+    LOCAL_C_INCLUDES        += hardware/qcom/display/$(TARGET_BOARD_PLATFORM)/libgralloc
+    LOCAL_C_INCLUDES        += hardware/qcom/display/$(TARGET_BOARD_PLATFORM)/libqdutils
+endif
 
-LOCAL_SHARED_LIBRARIES := libcamera_client liblog libhardware libutils libcutils libdl
-LOCAL_SHARED_LIBRARIES += libmmcamera_interface libmmjpeg_interface libui libcamera_metadata
+LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
+
 ifneq ($(TARGET_BOARD_PLATFORM),msm8974)
 LOCAL_SHARED_LIBRARIES += libqdMetaData
 endif

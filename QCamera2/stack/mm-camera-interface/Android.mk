@@ -31,10 +31,14 @@ LOCAL_C_INCLUDES := \
     system/media/camera/include
 
 LOCAL_CFLAGS += -DCAMERA_ION_HEAP_ID=ION_IOMMU_HEAP_ID
-LOCAL_C_INCLUDES+= $(kernel_includes)
-LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps)
+LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
-LOCAL_C_INCLUDES += hardware/qcom/media/mm-core/inc
+ifneq ($(TARGET_QCOM_MEDIA_VARIANT),)
+    LOCAL_C_INCLUDES += hardware/qcom/media-$(TARGET_QCOM_MEDIA_VARIANT)/mm-core/inc
+else
+    LOCAL_C_INCLUDES += hardware/qcom/media/mm-core/inc
+endif
 
 ifneq (1,$(filter 1,$(shell echo "$$(( $(PLATFORM_SDK_VERSION) >= 17 ))" )))
   LOCAL_CFLAGS += -include bionic/libc/kernel/common/linux/socket.h
