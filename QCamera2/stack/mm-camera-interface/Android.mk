@@ -28,7 +28,14 @@ LOCAL_C_INCLUDES := \
     $(LOCAL_PATH)/inc \
     $(LOCAL_PATH)/../common
 
+LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
+
+ifneq ($(TARGET_QCOM_MEDIA_VARIANT),)
+LOCAL_C_INCLUDES += hardware/qcom/media-$(TARGET_QCOM_MEDIA_VARIANT)/mm-core/inc
+else
 LOCAL_C_INCLUDES += hardware/qcom/media/mm-core/inc
+endif
 
 LOCAL_CFLAGS += -Wall -Werror
 
