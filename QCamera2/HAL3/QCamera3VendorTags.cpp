@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -44,10 +44,7 @@ const int QCAMERA3_SECTION_COUNT = QCAMERA3_SECTIONS_END - VENDOR_SECTION;
 enum qcamera3_ext_tags qcamera3_ext3_section_bounds[QCAMERA3_SECTIONS_END -
     VENDOR_SECTION] = {
         QCAMERA3_PRIVATEDATA_END,
-        QCAMERA3_CDS_END,
-        QCAMERA3_OPAQUE_RAW_END,
-        QCAMERA3_CROP_END,
-        QCAMERA3_TUNING_META_DATA_END
+        QCAMERA3_OPAQUE_RAW_END
 } ;
 
 typedef struct vendor_tag_info {
@@ -58,61 +55,31 @@ typedef struct vendor_tag_info {
 const char *qcamera3_ext_section_names[QCAMERA3_SECTIONS_END -
         VENDOR_SECTION] = {
     "org.codeaurora.qcamera3.privatedata",
-    "org.codeaurora.qcamera3.CDS",
-    "org.codeaurora.qcamera3.opaque_raw",
-    "org.codeaurora.qcamera3.crop",
-    "org.codeaurora.qcamera3.tuning_meta_data"
+    "org.codeaurora.qcamera3.opaque_raw"
 };
 
 vendor_tag_info_t qcamera3_privatedata[QCAMERA3_PRIVATEDATA_END - QCAMERA3_PRIVATEDATA_START] = {
-    { "privatedata_reprocess", TYPE_INT32 }
+    { "privatedata_reprocess", TYPE_BYTE }
 };
 
-vendor_tag_info_t qcamera3_cds[QCAMERA3_CDS_END - QCAMERA3_CDS_START] = {
-    { "cds_mode", TYPE_INT32 }
-};
-
-vendor_tag_info_t qcamera3_opaque_raw[QCAMERA3_OPAQUE_RAW_END -
-        QCAMERA3_OPAQUE_RAW_START] = {
+vendor_tag_info_t qcamera3_opaque_raw[QCAMERA3_OPAQUE_RAW_END - QCAMERA3_OPAQUE_RAW_START] = {
     { "opaque_raw_strides", TYPE_INT32 },
     { "opaque_raw_format", TYPE_BYTE }
-};
-
-vendor_tag_info_t qcamera3_crop[QCAMERA3_CROP_END- QCAMERA3_CROP_START] = {
-    { "count", TYPE_INT32 },
-    { "data", TYPE_INT32},
-    { "streamids", TYPE_INT32},
-};
-
-vendor_tag_info_t qcamera3_tuning_meta_data[QCAMERA3_TUNING_META_DATA_END -
-        QCAMERA3_TUNING_META_DATA_START] = {
-    { "tuning_meta_data_blob", TYPE_INT32 }
 };
 
 vendor_tag_info_t *qcamera3_tag_info[QCAMERA3_SECTIONS_END -
         VENDOR_SECTION] = {
     qcamera3_privatedata,
-    qcamera3_cds,
-    qcamera3_opaque_raw,
-    qcamera3_crop,
-    qcamera3_tuning_meta_data
+    qcamera3_opaque_raw
 };
 
 uint32_t qcamera3_all_tags[] = {
     // QCAMERA3_PRIVATEDATA
     (uint32_t)QCAMERA3_PRIVATEDATA_REPROCESS,
-    (uint32_t)QCAMERA3_CDS_MODE,
 
     // QCAMERA3_OPAQUE_RAW
     (uint32_t)QCAMERA3_OPAQUE_RAW_STRIDES,
-    (uint32_t)QCAMERA3_OPAQUE_RAW_FORMAT,
-
-    (uint32_t)QCAMERA3_CROP_COUNT_REPROCESS,
-    (uint32_t)QCAMERA3_CROP_REPROCESS,
-    (uint32_t)QCAMERA3_CROP_STREAM_ID_REPROCESS,
-
-    // QCAMERA3_TUNING_META_DATA
-    (uint32_t)QCAMERA3_TUNING_META_DATA_BLOB
+    (uint32_t)QCAMERA3_OPAQUE_RAW_FORMAT
 };
 
 const vendor_tag_ops_t* QCamera3VendorTags::Ops = NULL;
@@ -161,12 +128,12 @@ void QCamera3VendorTags::get_vendor_tag_ops(
 int QCamera3VendorTags::get_tag_count(
                 const vendor_tag_ops_t * ops)
 {
-    size_t count = 0;
+    int count = 0;
     if (ops == Ops)
         count = sizeof(qcamera3_all_tags)/sizeof(qcamera3_all_tags[0]);
 
     ALOGV("%s: count is %d", __func__, count);
-    return (int)count;
+    return count;
 }
 
 /*===========================================================================
@@ -221,7 +188,7 @@ const char* QCamera3VendorTags::get_section_name(
     const char *ret;
     uint32_t section = tag >> 16;
 
-    if (section < VENDOR_SECTION || section >= QCAMERA3_SECTIONS_END)
+    if (section < VENDOR_SECTION || section > QCAMERA3_SECTIONS_END)
         ret = NULL;
     else
         ret = qcamera3_ext_section_names[section - VENDOR_SECTION];
@@ -259,7 +226,7 @@ const char* QCamera3VendorTags::get_tag_name(
         goto done;
     }
 
-    if (section < VENDOR_SECTION || section >= QCAMERA3_SECTIONS_END)
+    if (section < VENDOR_SECTION || section > QCAMERA3_SECTIONS_END)
         ret = NULL;
     else if (tag >= (uint32_t)qcamera3_ext3_section_bounds[section_index])
         ret = NULL;
@@ -300,7 +267,7 @@ int QCamera3VendorTags::get_tag_type(
         ret = -1;
         goto done;
     }
-    if (section < VENDOR_SECTION || section >= QCAMERA3_SECTIONS_END)
+    if (section < VENDOR_SECTION || section > QCAMERA3_SECTIONS_END)
         ret = -1;
     else if (tag >= (uint32_t )qcamera3_ext3_section_bounds[section_index])
         ret = -1;

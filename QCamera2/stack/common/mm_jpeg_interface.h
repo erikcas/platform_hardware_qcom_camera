@@ -1,4 +1,4 @@
-/* Copyright (c) 2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012, 2014, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -41,7 +41,7 @@ typedef enum {
 } mm_jpeg_format_t;
 
 typedef struct {
-  cam_ae_params_t ae_params;
+  cam_3a_params_t cam_3a_params;
   cam_sensor_params_t sensor_params;
 } mm_jpeg_exif_params_t;
 typedef struct {
@@ -124,6 +124,9 @@ typedef struct {
 
   /* jpeg quality: range 0~100 */
   uint32_t quality;
+
+  /* jpeg thumbnail quality: range 0~100 */
+  uint32_t thumb_quality;
 
   /* buf to exif entries, caller needs to
    * take care of the memory manage with insider ptr */

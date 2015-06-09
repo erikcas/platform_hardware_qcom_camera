@@ -45,91 +45,44 @@ namespace qcamera {
 class QCameraMemory {
 
 public:
+    int cleanCache(int index) {return cacheOps(index, ION_IOC_CLEAN_CACHES);}
+    int invalidateCache(int index) {return cacheOps(index, ION_IOC_INV_CACHES);}
+    int cleanInvalidateCache(int index) {return cacheOps(index, ION_IOC_CLEAN_INV_CACHES);}
+    int getFd(int index) const;
+    int getSize(int index) const;
+    int getCnt() const;
 
-    int cleanCache(uint32_t index)
-    {
-        return cacheOps(index, ION_IOC_CLEAN_CACHES);
-    }
-    int invalidateCache(uint32_t index)
-    {
-        return cacheOps(index, ION_IOC_INV_CACHES);
-    }
-    int cleanInvalidateCache(uint32_t index)
-    {
-        return cacheOps(index, ION_IOC_CLEAN_INV_CACHES);
-    }
-    int getFd(uint32_t index) const;
-    ssize_t getSize(uint32_t index) const;
-    uint8_t getCnt() const;
-
-    virtual int allocate(uint8_t count, size_t size, uint32_t is_secure) = 0;
+    virtual int allocate(int count, int size) = 0;
     virtual void deallocate() = 0;
-    virtual int allocateMore(uint8_t count, size_t size) = 0;
-    virtual int cacheOps(uint32_t index, unsigned int cmd) = 0;
+    virtual int cacheOps(int index, unsigned int cmd) = 0;
     virtual int getRegFlags(uint8_t *regFlags) const = 0;
-    virtual camera_memory_t *getMemory(uint32_t index,
-            bool metadata) const = 0;
+    virtual camera_memory_t *getMemory(int index, bool metadata) const = 0;
     virtual int getMatchBufIndex(const void *opaque, bool metadata) const = 0;
-    virtual void *getPtr(uint32_t index) const= 0;
+    virtual void *getPtr(int index) const= 0;
 
     QCameraMemory(bool cached);
     virtual ~QCameraMemory();
 
     void getBufDef(const cam_frame_len_offset_t &offset,
-            mm_camera_buf_def_t &bufDef, uint32_t index) const;
-
-    void traceLogAllocStart(size_t size, int count, const char *allocName);
-    void traceLogAllocEnd(size_t size);
+                mm_camera_buf_def_t &bufDef, int index) const;
 
 protected:
     struct QCameraMemInfo {
         int fd;
         int main_ion_fd;
-        ion_user_handle_t handle;
-        size_t size;
-        bool cached;
-        unsigned int heap_id;
+        struct ion_handle *handle;
+        uint32_t size;
     };
 
-    int alloc(int count, size_t size, unsigned int heap_id,
-            uint32_t is_secure);
+    int alloc(int count, int size, int heap_id);
     void dealloc();
-    static int allocOneBuffer(struct QCameraMemInfo &memInfo,
-            unsigned int heap_id, size_t size, bool cached, uint32_t is_secure);
-    static void deallocOneBuffer(struct QCameraMemInfo &memInfo);
-    int cacheOpsInternal(uint32_t index, unsigned int cmd, void *vaddr);
+    int allocOneBuffer(struct QCameraMemInfo &memInfo, int heap_id, int size);
+    void deallocOneBuffer(struct QCameraMemInfo &memInfo);
+    int cacheOpsInternal(int index, unsigned int cmd, void *vaddr);
 
     bool m_bCached;
-    uint8_t mBufferCount;
+    int mBufferCount;
     struct QCameraMemInfo mMemInfo[MM_CAMERA_MAX_NUM_FRAMES];
-
-    QCameraMemoryPool *mMemoryPool;
-    cam_stream_type_t mStreamType;
-};
-
-class QCameraMemoryPool {
-
-public:
-
-    QCameraMemoryPool();
-    virtual ~QCameraMemoryPool();
-
-    int allocateBuffer(struct QCameraMemory::QCameraMemInfo &memInfo,
-            unsigned int heap_id, size_t size, bool cached,
-            cam_stream_type_t streamType, uint32_t is_secure);
-    void releaseBuffer(struct QCameraMemory::QCameraMemInfo &memInfo,
-            cam_stream_type_t streamType);
-    void clear();
-
-protected:
-
-    int findBufferLocked(struct QCameraMemory::QCameraMemInfo &memInfo,
-            unsigned int heap_id, size_t size, bool cached,
-            cam_stream_type_t streamType);
-
-    android::List<QCameraMemory::QCameraMemInfo> mPools[CAM_STREAM_TYPE_MAX];
-    pthread_mutex_t mLock;
-
 };
 
 // Internal heap memory is used for memories used internally
@@ -139,14 +92,13 @@ public:
     QCameraHeapMemory(bool cached);
     virtual ~QCameraHeapMemory();
 
-    virtual int allocate(uint8_t count, size_t size, uint32_t is_secure);
-    virtual int allocateMore(uint8_t count, size_t size);
+    virtual int allocate(int count, int size);
     virtual void deallocate();
-    virtual int cacheOps(uint32_t index, unsigned int cmd);
+    virtual int cacheOps(int index, unsigned int cmd);
     virtual int getRegFlags(uint8_t *regFlags) const;
-    virtual camera_memory_t *getMemory(uint32_t index, bool metadata) const;
+    virtual camera_memory_t *getMemory(int index, bool metadata) const;
     virtual int getMatchBufIndex(const void *opaque, bool metadata) const;
-    virtual void *getPtr(uint32_t index) const;
+	virtual void *getPtr(int index) const;
 
 private:
     void *mPtr[MM_CAMERA_MAX_NUM_FRAMES];
@@ -159,14 +111,13 @@ public:
     QCameraStreamMemory(camera_request_memory getMemory, bool cached);
     virtual ~QCameraStreamMemory();
 
-    virtual int allocate(uint8_t count, size_t size, uint32_t is_secure);
-    virtual int allocateMore(uint8_t count, size_t size);
+    virtual int allocate(int count, int size);
     virtual void deallocate();
-    virtual int cacheOps(uint32_t index, unsigned int cmd);
+    virtual int cacheOps(int index, unsigned int cmd);
     virtual int getRegFlags(uint8_t *regFlags) const;
-    virtual camera_memory_t *getMemory(uint32_t index, bool metadata) const;
+    virtual camera_memory_t *getMemory(int index, bool metadata) const;
     virtual int getMatchBufIndex(const void *opaque, bool metadata) const;
-    virtual void *getPtr(uint32_t index) const;
+	virtual void *getPtr(int index) const;
 
 protected:
     camera_request_memory mGetMemory;
@@ -180,10 +131,9 @@ public:
     QCameraVideoMemory(camera_request_memory getMemory, bool cached);
     virtual ~QCameraVideoMemory();
 
-    virtual int allocate(uint8_t count, size_t size, uint32_t is_secure);
-    virtual int allocateMore(uint8_t count, size_t size);
+    virtual int allocate(int count, int size);
     virtual void deallocate();
-    virtual camera_memory_t *getMemory(uint32_t index, bool metadata) const;
+    virtual camera_memory_t *getMemory(int index, bool metadata) const;
     virtual int getMatchBufIndex(const void *opaque, bool metadata) const;
 
 private:
@@ -202,20 +152,19 @@ public:
     void setNativeWindow(preview_stream_ops_t *anw);
     virtual ~QCameraGrallocMemory();
 
-    virtual int allocate(uint8_t count, size_t size, uint32_t is_secure);
-    virtual int allocateMore(uint8_t count, size_t size);
+    virtual int allocate(int count, int size);
     virtual void deallocate();
-    virtual int cacheOps(uint32_t index, unsigned int cmd);
+    virtual int cacheOps(int index, unsigned int cmd);
     virtual int getRegFlags(uint8_t *regFlags) const;
-    virtual camera_memory_t *getMemory(uint32_t index, bool metadata) const;
+    virtual camera_memory_t *getMemory(int index, bool metadata) const;
     virtual int getMatchBufIndex(const void *opaque, bool metadata) const;
-    virtual void *getPtr(uint32_t index) const;
+	virtual void *getPtr(int index) const;
 
     void setWindowInfo(preview_stream_ops_t *window, int width, int height, int format);
     // Enqueue/display buffer[index] onto the native window,
     // and dequeue one buffer from it.
     // Returns the buffer index of the dequeued buffer.
-    int displayBuffer(uint32_t index);
+    int displayBuffer(int index);
 
 private:
     buffer_handle_t *mBufferHandle[MM_CAMERA_MAX_NUM_FRAMES];

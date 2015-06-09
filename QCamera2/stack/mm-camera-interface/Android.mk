@@ -30,11 +30,7 @@ LOCAL_C_INCLUDES := \
 
 LOCAL_C_INCLUDES += hardware/qcom/media/mm-core/inc
 
-ifneq (1,$(filter 1,$(shell echo "$$(( $(PLATFORM_SDK_VERSION) >= 17 ))" )))
-  LOCAL_CFLAGS += -include bionic/libc/kernel/common/linux/socket.h
-  LOCAL_CFLAGS += -include bionic/libc/kernel/common/linux/un.h
-endif
-LOCAL_CFLAGS += -Wall -Wextra -Werror
+LOCAL_CFLAGS += -Wall -Werror
 
 LOCAL_SRC_FILES := $(MM_CAM_FILES)
 

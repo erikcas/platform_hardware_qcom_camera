@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -225,6 +225,8 @@ typedef struct mm_stream {
 
     mm_camera_stream_mem_vtbl_t mem_vtbl; /* mem ops tbl */
 
+    mm_camera_map_unmap_ops_tbl_t map_ops;
+
     int8_t queued_buffer_count;
 } mm_stream_t;
 
@@ -279,7 +281,7 @@ typedef struct {
     uint32_t buf_idx;
     int32_t plane_idx;
     int fd;
-    size_t size;
+    uint32_t size;
 } mm_evt_paylod_map_stream_buf_t;
 
 typedef struct {
@@ -412,7 +414,7 @@ extern int32_t mm_camera_util_g_ctrl(int32_t fd,
 /* send msg throught domain socket for fd mapping */
 extern int32_t mm_camera_util_sendmsg(mm_camera_obj_t *my_obj,
                                       void *msg,
-                                      size_t buf_size,
+                                      uint32_t buf_size,
                                       int sendfd);
 /* Check if hardware target is A family */
 uint8_t mm_camera_util_chip_is_a_family(void);
@@ -434,7 +436,7 @@ extern int32_t mm_camera_get_parms(mm_camera_obj_t *my_obj,
 extern int32_t mm_camera_map_buf(mm_camera_obj_t *my_obj,
                                  uint8_t buf_type,
                                  int fd,
-                                 size_t size);
+                                 uint32_t size);
 extern int32_t mm_camera_unmap_buf(mm_camera_obj_t *my_obj,
                                    uint8_t buf_type);
 extern int32_t mm_camera_do_auto_focus(mm_camera_obj_t *my_obj);
@@ -494,7 +496,7 @@ extern int32_t mm_camera_map_stream_buf(mm_camera_obj_t *my_obj,
                                         uint32_t buf_idx,
                                         int32_t plane_idx,
                                         int fd,
-                                        size_t size);
+                                        uint32_t size);
 extern int32_t mm_camera_unmap_stream_buf(mm_camera_obj_t *my_obj,
                                           uint32_t ch_id,
                                           uint32_t stream_id,
@@ -538,7 +540,7 @@ extern int32_t mm_stream_map_buf(mm_stream_t *my_obj,
                                  uint32_t frame_idx,
                                  int32_t plane_idx,
                                  int fd,
-                                 size_t size);
+                                 uint32_t size);
 extern int32_t mm_stream_unmap_buf(mm_stream_t *my_obj,
                                    uint8_t buf_type,
                                    uint32_t frame_idx,
@@ -567,15 +569,13 @@ extern int32_t mm_camera_poll_thread_del_poll_fd(
                                 mm_camera_poll_thread_t * poll_cb,
                                 uint32_t handler,
                                 mm_camera_call_type_t);
+extern int32_t mm_camera_poll_thread_commit_updates(
+        mm_camera_poll_thread_t * poll_cb);
 extern int32_t mm_camera_cmd_thread_launch(
                                 mm_camera_cmd_thread_t * cmd_thread,
                                 mm_camera_cmd_cb_t cb,
                                 void* user_data);
 extern int32_t mm_camera_cmd_thread_name(const char* name);
 extern int32_t mm_camera_cmd_thread_release(mm_camera_cmd_thread_t * cmd_thread);
-extern int32_t mm_camera_channel_advanced_capture(mm_camera_obj_t *my_obj,
-                                               mm_camera_advanced_capture_t advanced_capturetype,
-                                               uint32_t ch_id,
-                                               uint32_t start_flag);
 
 #endif /* __MM_CAMERA_H__ */

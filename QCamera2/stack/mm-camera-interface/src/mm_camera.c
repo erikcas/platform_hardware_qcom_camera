@@ -241,47 +241,30 @@ int32_t mm_camera_open(mm_camera_obj_t *my_obj)
     int32_t rc = 0;
     int8_t n_try=MM_CAMERA_DEV_OPEN_TRIES;
     uint8_t sleep_msec=MM_CAMERA_DEV_OPEN_RETRY_SLEEP;
-    int cam_idx = 0;
-    const char *dev_name_value = NULL;
-    char prop[PROPERTY_VALUE_MAX];
-    uint32_t globalLogLevel = 0;
-
-    property_get("persist.camera.hal.debug", prop, "0");
-    int val = atoi(prop);
-    if (0 <= val) {
-        gMmCameraIntfLogLevel = (uint32_t)val;
-    }
-    property_get("persist.camera.global.debug", prop, "0");
-    val = atoi(prop);
-    if (0 <= val) {
-        globalLogLevel = (uint32_t)val;
-    }
-
-    /* Highest log level among hal.logs and global.logs is selected */
-    if (gMmCameraIntfLogLevel < globalLogLevel)
-        gMmCameraIntfLogLevel = globalLogLevel;
+    unsigned int cam_idx = 0;
 
     CDBG("%s:  begin\n", __func__);
 
     snprintf(dev_name, sizeof(dev_name), "/dev/%s",
-             dev_name_value);
-    sscanf(dev_name, "/dev/video%d", &cam_idx);
-    CDBG("%s: dev name = %s, cam_idx = %d", __func__, dev_name, cam_idx);
+             mm_camera_util_get_dev_name(my_obj->my_hdl));
+    sscanf(dev_name, "/dev/video%u", &cam_idx);
+    CDBG_HIGH("%s: dev name = %s, cam_idx = %d", __func__, dev_name, cam_idx);
 
     do{
         n_try--;
+        errno = 0;
         my_obj->ctrl_fd = open(dev_name, O_RDWR | O_NONBLOCK);
         CDBG("%s:  ctrl_fd = %d, errno == %d", __func__, my_obj->ctrl_fd, errno);
-        if((my_obj->ctrl_fd > 0) || (errno != EIO) || (n_try <= 0 )) {
+        if((my_obj->ctrl_fd >= 0) || (errno != EIO && errno != ETIMEDOUT) || (n_try <= 0 )) {
             CDBG_HIGH("%s:  opened, break out while loop", __func__);
             break;
         }
-        CDBG_HIGH("%s:failed with I/O error retrying after %d milli-seconds",
-             __func__, sleep_msec);
-        usleep(sleep_msec * 1000U);
+        ALOGE("%s:Failed with %s error, retrying after %d milli-seconds",
+             __func__, strerror(errno), sleep_msec);
+        usleep(sleep_msec * 1000);
     }while (n_try > 0);
 
-    if (my_obj->ctrl_fd <= 0) {
+    if (my_obj->ctrl_fd < 0) {
         CDBG_ERROR("%s: cannot open control fd of '%s' (%s)\n",
                  __func__, dev_name, strerror(errno));
         rc = -1;
@@ -294,16 +277,16 @@ int32_t mm_camera_open(mm_camera_obj_t *my_obj)
         n_try--;
         my_obj->ds_fd = mm_camera_socket_create(cam_idx, MM_CAMERA_SOCK_TYPE_UDP);
         CDBG("%s:  ds_fd = %d, errno = %d", __func__, my_obj->ds_fd, errno);
-        if((my_obj->ds_fd > 0) || (n_try <= 0 )) {
+        if((my_obj->ds_fd >= 0) || (n_try <= 0 )) {
             CDBG("%s:  opened, break out while loop", __func__);
             break;
         }
         CDBG("%s:failed with I/O error retrying after %d milli-seconds",
              __func__, sleep_msec);
-        usleep(sleep_msec * 1000U);
+        usleep(sleep_msec * 1000);
     } while (n_try > 0);
 
-    if (my_obj->ds_fd <= 0) {
+    if (my_obj->ds_fd < 0) {
         CDBG_ERROR("%s: cannot open domain socket fd of '%s'(%s)\n",
                  __func__, dev_name, strerror(errno));
         rc = -1;
@@ -333,13 +316,13 @@ int32_t mm_camera_open(mm_camera_obj_t *my_obj)
     return rc;
 
 on_error:
-    if (my_obj->ctrl_fd > 0) {
+    if (my_obj->ctrl_fd >= 0) {
         close(my_obj->ctrl_fd);
-        my_obj->ctrl_fd = 0;
+        my_obj->ctrl_fd = -1;
     }
-    if (my_obj->ds_fd > 0) {
+    if (my_obj->ds_fd >= 0) {
         mm_camera_socket_close(my_obj->ds_fd);
-       my_obj->ds_fd = 0;
+       my_obj->ds_fd = -1;
     }
 
     /* we do not need to unlock cam_lock here before return
@@ -372,13 +355,13 @@ int32_t mm_camera_close(mm_camera_obj_t *my_obj)
     CDBG("%s : Close evt cmd Thread in Cam Close",__func__);
     mm_camera_cmd_thread_release(&my_obj->evt_thread);
 
-    if(my_obj->ctrl_fd > 0) {
+    if(my_obj->ctrl_fd >= 0) {
         close(my_obj->ctrl_fd);
-        my_obj->ctrl_fd = 0;
+        my_obj->ctrl_fd = -1;
     }
-    if(my_obj->ds_fd > 0) {
+    if(my_obj->ds_fd >= 0) {
         mm_camera_socket_close(my_obj->ds_fd);
-        my_obj->ds_fd = 0;
+        my_obj->ds_fd = -1;
     }
     pthread_mutex_destroy(&my_obj->msg_lock);
 
@@ -857,7 +840,7 @@ uint32_t mm_camera_add_stream(mm_camera_obj_t *my_obj,
         mm_channel_fsm_fn(ch_obj,
                           MM_CHANNEL_EVT_ADD_STREAM,
                           NULL,
-                          (void *)&s_hdl);
+                          (void*)&s_hdl);
     } else {
         pthread_mutex_unlock(&my_obj->cam_lock);
     }
@@ -894,7 +877,7 @@ int32_t mm_camera_del_stream(mm_camera_obj_t *my_obj,
 
         rc = mm_channel_fsm_fn(ch_obj,
                                MM_CHANNEL_EVT_DEL_STREAM,
-                               (void *)&stream_id,
+                               (void*)stream_id,
                                NULL);
     } else {
         pthread_mutex_unlock(&my_obj->cam_lock);
@@ -937,7 +920,7 @@ int32_t mm_camera_config_stream(mm_camera_obj_t *my_obj,
         payload.config = config;
         rc = mm_channel_fsm_fn(ch_obj,
                                MM_CHANNEL_EVT_CONFIG_STREAM,
-                               (void *)&payload,
+                               (void*)&payload,
                                NULL);
     } else {
         pthread_mutex_unlock(&my_obj->cam_lock);
@@ -1044,8 +1027,8 @@ int32_t mm_camera_request_super_buf(mm_camera_obj_t *my_obj,
 
         rc = mm_channel_fsm_fn(ch_obj,
                                MM_CHANNEL_EVT_REQUEST_SUPER_BUF,
-                               (void *)&num_buf_requested,
-                               (void *)&num_retro_buf_requested);
+                               (void*)num_buf_requested,
+                               NULL);
     } else {
         pthread_mutex_unlock(&my_obj->cam_lock);
     }
@@ -1114,7 +1097,7 @@ int32_t mm_camera_flush_super_buf_queue(mm_camera_obj_t *my_obj, uint32_t ch_id,
 
         rc = mm_channel_fsm_fn(ch_obj,
                                MM_CHANNEL_EVT_FLUSH_SUPER_BUF_QUEUE,
-                               (void *)&frame_idx,
+                               (void *)frame_idx,
                                NULL);
     } else {
         pthread_mutex_unlock(&my_obj->cam_lock);
@@ -1151,7 +1134,7 @@ int32_t mm_camera_config_channel_notify(mm_camera_obj_t *my_obj,
 
         rc = mm_channel_fsm_fn(ch_obj,
                                MM_CHANNEL_EVT_CONFIG_NOTIFY_MODE,
-                               (void *)&notify_mode,
+                               (void *)notify_mode,
                                NULL);
     } else {
         pthread_mutex_unlock(&my_obj->cam_lock);
@@ -1337,7 +1320,7 @@ int32_t mm_camera_map_stream_buf(mm_camera_obj_t *my_obj,
                                  uint32_t buf_idx,
                                  int32_t plane_idx,
                                  int fd,
-                                 size_t size)
+                                 uint32_t size)
 {
     int32_t rc = -1;
     mm_evt_paylod_map_stream_buf_t payload;
@@ -1487,7 +1470,7 @@ int32_t mm_camera_evt_sub(mm_camera_obj_t * my_obj,
  *==========================================================================*/
 void mm_camera_util_wait_for_event(mm_camera_obj_t *my_obj,
                                    uint32_t evt_mask,
-                                   uint32_t *status)
+                                   int32_t *status)
 {
     pthread_mutex_lock(&my_obj->evt_lock);
     while (!(my_obj->evt_rcvd.server_event_type & evt_mask)) {
@@ -1516,11 +1499,11 @@ void mm_camera_util_wait_for_event(mm_camera_obj_t *my_obj,
  *==========================================================================*/
 int32_t mm_camera_util_sendmsg(mm_camera_obj_t *my_obj,
                                void *msg,
-                               size_t buf_size,
+                               uint32_t buf_size,
                                int sendfd)
 {
     int32_t rc = -1;
-    uint32_t status;
+    int32_t status;
 
     /* need to lock msg_lock, since sendmsg until reposonse back is deemed as one operation*/
     pthread_mutex_lock(&my_obj->msg_lock);
@@ -1556,7 +1539,7 @@ int32_t mm_camera_util_sendmsg(mm_camera_obj_t *my_obj,
 int32_t mm_camera_map_buf(mm_camera_obj_t *my_obj,
                           uint8_t buf_type,
                           int fd,
-                          size_t size)
+                          uint32_t size)
 {
     int32_t rc = 0;
     cam_sock_packet_t packet;
@@ -1631,8 +1614,8 @@ int32_t mm_camera_util_s_ctrl(int32_t fd,  uint32_t id, int32_t *value)
     }
     rc = ioctl(fd, VIDIOC_S_CTRL, &control);
 
-    CDBG("%s: fd=%d, S_CTRL, id=0x%x, value = %p, rc = %d\n",
-         __func__, fd, id, value, rc);
+    CDBG("%s: fd=%d, S_CTRL, id=0x%x, value = 0x%x, rc = %d\n",
+         __func__, fd, id, (uint32_t)value, rc);
     if (value != NULL) {
         *value = control.value;
     }
@@ -1669,69 +1652,4 @@ int32_t mm_camera_util_g_ctrl( int32_t fd, uint32_t id, int32_t *value)
         *value = control.value;
     }
     return (rc >= 0)? 0 : -1;
-}
-
-/*===========================================================================
- * FUNCTION   : mm_camera_channel_advanced_capture
- *
- * DESCRIPTION: sets the channel advanced capture
- *
- * PARAMETERS :
- *   @my_obj       : camera object
- *   @advanced_capture_type : advanced capture type.
- *   @ch_id        : channel handle
- *   @start_flag  : flag to indicate start/stop
- *
- * RETURN     : int32_t type of status
- *              0  -- success
- *              -1 -- failure
- *==========================================================================*/
-int32_t mm_camera_channel_advanced_capture(mm_camera_obj_t *my_obj,
-                                        mm_camera_advanced_capture_t advanced_capture_type,
-                                        uint32_t ch_id,
-                                        uint32_t start_flag)
-{
-    CDBG("%s: E",__func__);
-    int32_t rc = -1;
-    mm_channel_t * ch_obj =
-        mm_camera_util_get_channel_by_handler(my_obj, ch_id);
-
-    if (NULL != ch_obj) {
-        pthread_mutex_lock(&ch_obj->ch_lock);
-        pthread_mutex_unlock(&my_obj->cam_lock);
-        switch (advanced_capture_type) {
-            case MM_CAMERA_AF_BRACKETING:
-                rc = mm_channel_fsm_fn(ch_obj,
-                                       MM_CHANNEL_EVT_AF_BRACKETING,
-                                       (void *)&start_flag,
-                                       NULL);
-                break;
-            case MM_CAMERA_AE_BRACKETING:
-                rc = mm_channel_fsm_fn(ch_obj,
-                                       MM_CHANNEL_EVT_AE_BRACKETING,
-                                       (void *)&start_flag,
-                                       NULL);
-                break;
-            case MM_CAMERA_FLASH_BRACKETING:
-                rc = mm_channel_fsm_fn(ch_obj,
-                                       MM_CHANNEL_EVT_FLASH_BRACKETING,
-                                       (void *)&start_flag,
-                                       NULL);
-                break;
-            case MM_CAMERA_ZOOM_1X:
-                rc = mm_channel_fsm_fn(ch_obj,
-                                       MM_CHANNEL_EVT_ZOOM_1X,
-                                       (void *)&start_flag,
-                                       NULL);
-                break;
-            default:
-                break;
-        }
-
-    } else {
-        pthread_mutex_unlock(&my_obj->cam_lock);
-    }
-
-    CDBG("%s: X",__func__);
-    return rc;
 }

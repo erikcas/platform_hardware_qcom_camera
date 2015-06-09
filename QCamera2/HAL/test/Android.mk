@@ -26,7 +26,6 @@ LOCAL_C_INCLUDES += \
 LOCAL_MODULE:= camera_test
 LOCAL_MODULE_TAGS:= tests
 
-LOCAL_CFLAGS += -Wall -Wextra -Werror -Wno-unused-parameter
-LOCAL_CFLAGS += -O0
+LOCAL_CFLAGS += -Wall -fno-short-enums -O0
 
 include $(BUILD_EXECUTABLE)
