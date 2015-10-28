@@ -1,4 +1,4 @@
-ifeq ($(TARGET_ARCH),arm)
+ifneq (,$(filter $(TARGET_ARCH), arm arm64))
 
 LOCAL_PATH:= $(call my-dir)
 
@@ -74,7 +74,7 @@ LOCAL_SHARED_LIBRARIES += libmmcamera_interface libmmjpeg_interface libui libcam
 LOCAL_SHARED_LIBRARIES += libqdMetaData
 
 LOCAL_MODULE_RELATIVE_PATH := hw
-LOCAL_MODULE := camera.$(SOMC_PLATFORM)
+LOCAL_MODULE := camera.$(TARGET_BOARD_PLATFORM)
 LOCAL_MODULE_TAGS := optional
 
 LOCAL_32_BIT_ONLY := $(BOARD_QTI_CAMERA_32BIT_ONLY)

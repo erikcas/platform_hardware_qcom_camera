@@ -46,6 +46,11 @@ ifneq ($(TARGET_QCOM_DISPLAY_VARIANT),)
 else
     LOCAL_C_INCLUDES        += hardware/qcom/display/$(TARGET_BOARD_PLATFORM)/libgralloc
 endif
+ifneq ($(BOARD_USES_QCOM_HARDWARE),)
+    LOCAL_C_INCLUDES        +=  frameworks/av-caf/include/media/stagefright
+else
+    LOCAL_C_INCLUDES        +=  frameworks/av/include/media/stagefright
+endif
 LOCAL_MODULE:= camera_test
 LOCAL_MODULE_TAGS:= tests
 
